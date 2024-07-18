@@ -14,7 +14,7 @@ export default auth((req) => {
   const path = `${url.pathname}${searchParams.length > 0 ? `?${searchParams}` : ""}`;
   if (!req.auth) {
     if (path !== "/login") {
-      return NextResponse.redirect(new URL(`/login`, `http://${hostname}`));
+      return NextResponse.redirect(new URL(`/login`, `https://${hostname}`));
     }
   }
 });
