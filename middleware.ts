@@ -17,4 +17,11 @@ export default auth((req) => {
       return NextResponse.redirect(new URL(`/login`, `https://${hostname}`));
     }
   }
+  if (req.auth) {
+    if (path == "/login" || path == "/") {
+      return NextResponse.redirect(
+        new URL(`/dashboard`, `https://${hostname}`),
+      );
+    }
+  }
 });
