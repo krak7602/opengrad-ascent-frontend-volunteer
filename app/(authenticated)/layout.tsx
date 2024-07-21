@@ -10,14 +10,12 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionWrapper>
-      <div className="flex h-screen w-full flex-col lg:flex-row">
-        <SideNavBar />
-        <div className="flex-1">
-          <BottomNavBar />
-          <main className="p-6">{children}</main>
-        </div>
-        <Toaster />
+      <SideNavBar />
+      <div className="flex-1">
+        <BottomNavBar />
+        <main className="p-6">{children}</main>
       </div>
+      <Toaster />
     </SessionWrapper>
   );
 }
