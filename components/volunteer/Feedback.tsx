@@ -9,6 +9,7 @@ import { useFetch } from "@/lib/useFetch";
 import { useListState } from "@mantine/hooks";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Feedback({
   feedbackId,
@@ -19,6 +20,7 @@ export default function Feedback({
 }) {
   const router = useRouter();
   const session = useSession();
+  const { toast } = useToast();
 
   const { data, loading, error, refetch, abort } = useFetch<Feedback>(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/get/${feedbackId}`,
@@ -120,6 +122,9 @@ export default function Feedback({
     } catch (e) {
       console.log(e);
     }
+    toast({
+      description: "Your feedback has been submitted successfully",
+    });
     router.push("/inbox");
   };
 
