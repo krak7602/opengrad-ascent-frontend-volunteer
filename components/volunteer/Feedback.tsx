@@ -74,7 +74,7 @@ export default function Feedback({
         });
       });
     }
-  }, [data, setRespItems]);
+  }, [data]);
 
   const handleDescChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>,
