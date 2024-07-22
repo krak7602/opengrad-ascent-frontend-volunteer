@@ -183,14 +183,13 @@ export default function DailyLog() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-auto p-0">
-                      <PopoverClose>
-                        <Calendar
-                          initialFocus
-                          mode="single"
-                          selected={date}
-                          onSelect={setDate}
-                        />
-                      </PopoverClose>
+                      <Calendar
+                        initialFocus
+                        disabled={{ after: new Date() }}
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
