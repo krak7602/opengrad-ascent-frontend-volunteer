@@ -125,7 +125,7 @@ export default function Page({
       <div className="container mx-auto my-6 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 items-start justify-between mb-2 pb-4">
           <div className="flex flex-col gap-1">
-            <h1 className="rounded-sm text-xs bg-primary text-white p-1 font-bold pl-1 md:mr-5 w-min">
+            <h1 className="rounded-sm text-xs bg-primary text-white p-1 font-bold pl-1 md:mr-5 w-fit">
               {PocDetails?.data?.user_id?.name}
             </h1>
             <h1 className="text-2xl pb-1 font-bold">Assigned Mentees </h1>
