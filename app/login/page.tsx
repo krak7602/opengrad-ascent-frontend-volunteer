@@ -10,7 +10,7 @@ export default function Page({
 }) {
   const role = "volunteer";
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gray-100 px-4 py-12 dark:bg-gray-950">
+    <div className="flex min-h-[100dvh] min-w-[100dvw] items-center justify-center bg-gray-100 px-4 py-12 dark:bg-gray-950">
       <div className="w-full max-w-md space-y-8">
         <div className="flex justify-center">
           <div className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-700">
