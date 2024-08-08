@@ -10,6 +10,11 @@ import { useListState } from "@mantine/hooks";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import Error from "@/components/Error";
+import Loading from "@/components/Loading";
+import Refetching from "@/components/Refetching";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Feedback({
   feedbackId,
@@ -21,17 +26,37 @@ export default function Feedback({
   const router = useRouter();
   const session = useSession();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data, loading, error, refetch, abort } = useFetch<Feedback>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/get/${feedbackId}`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
-      autoInvoke: true,
+  const { data, isError, isLoading, isRefetching } = useQuery<Feedback>({
+    queryKey: ["feedback"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/get/${feedbackId}`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
     },
-    [session],
-  );
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const { data, loading, error, refetch, abort } = useFetch<Feedback>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/get/${feedbackId}`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //     autoInvoke: true,
+  //   },
+  //   [session],
+  // );
   interface FeedbackItem {
     id: number;
     type: string;
@@ -101,31 +126,68 @@ export default function Feedback({
     });
   };
 
+  const mutation = useMutation({
+    mutationKey: ["submitFeedback"],
+    mutationFn: async (data: any) => {
+      try {
+        if (data) {
+          const resp = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/response`,
+            {
+              form_id: data?.id,
+              vol_id: session.data?.user.auth_id,
+              feedbackitemResponses: respItems,
+            },
+            {
+              headers: {
+                authorization: `Bearer ${session.data?.user.auth_token}`,
+              },
+            },
+          );
+        }
+
+        // if (resp.data.id) {
+        //   return { id: resp.data.id, name: studName, email: studEmail };
+        // }
+      } catch (e) {
+        console.log(e);
+      }
+    },
+    onSettled: () => {
+      toast({
+        description: "Your feedback has been submitted successfully",
+      });
+      router.push("/inbox");
+      // queryClient.invalidateQueries({ queryKey: ["dailyLog"] });
+    },
+  });
+
   const formSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (data) {
-        const resp = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/response`,
-          {
-            form_id: data?.id,
-            vol_id: session.data?.user.auth_id,
-            feedbackitemResponses: respItems,
-          },
-          {
-            headers: {
-              authorization: `Bearer ${session.data?.user.auth_token}`,
-            },
-          },
-        );
-      }
+      // if (data) {
+      mutation.mutate(data);
+      // const resp = await axios.post(
+      //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/forms/response`,
+      //   {
+      //     form_id: data?.id,
+      //     vol_id: session.data?.user.auth_id,
+      //     feedbackitemResponses: respItems,
+      //   },
+      //   {
+      //     headers: {
+      //       authorization: `Bearer ${session.data?.user.auth_token}`,
+      //     },
+      //   },
+      // );
+      // }
     } catch (e) {
       console.log(e);
     }
-    toast({
-      description: "Your feedback has been submitted successfully",
-    });
-    router.push("/inbox");
+    // toast({
+    //   description: "Your feedback has been submitted successfully",
+    // });
+    // router.push("/inbox");
   };
 
   return (
@@ -137,56 +199,61 @@ export default function Feedback({
           </div>
         </div>
         <div className="overflow-x-auto px-1 pt-2">
-          <form onSubmit={formSubmit}>
-            <div className=" flex flex-col gap-4">
-              {data?.feedbackItems.map((value, index) => {
-                return (
-                  <div
-                    key={index}
-                    className="flex flex-col p-2 bg-gray-100 rounded ring-1 ring-gray-200"
-                  >
-                    <div className=" font-medium text-md text-pretty py-2 text-sm">
-                      {index + 1}. {value.question}
+          {isRefetching && <Refetching />}
+          {isError && <Error />}
+          {!isError && isLoading && <Loading />}
+          {!isError && !isLoading && data && (
+            <form onSubmit={formSubmit}>
+              <div className=" flex flex-col gap-4">
+                {data?.feedbackItems.map((value, index) => {
+                  return (
+                    <div
+                      key={index}
+                      className="flex flex-col p-2 bg-gray-100 rounded ring-1 ring-gray-200"
+                    >
+                      <div className=" font-medium text-md text-pretty py-2 text-sm">
+                        {index + 1}. {value.question}
+                      </div>
+                      {value.type === "descriptive" && (
+                        <div>
+                          <Textarea
+                            className="min-h-[100px] min-w-max text-sm"
+                            onChange={(e) => {
+                              handleDescChange(e, index);
+                            }}
+                          />
+                        </div>
+                      )}
+                      {value.type === "multiplechoice" && (
+                        <div>
+                          <RadioGroup
+                            onValueChange={(e) => {
+                              handleOptChange(e, index);
+                            }}
+                          >
+                            {value.options.map((opt, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center space-x-2"
+                              >
+                                <RadioGroupItem value={opt} id={opt} />
+                                <Label className=" font-normal" htmlFor={opt}>
+                                  {opt}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        </div>
+                      )}
                     </div>
-                    {value.type === "descriptive" && (
-                      <div>
-                        <Textarea
-                          className="min-h-[100px] min-w-max text-sm"
-                          onChange={(e) => {
-                            handleDescChange(e, index);
-                          }}
-                        />
-                      </div>
-                    )}
-                    {value.type === "multiplechoice" && (
-                      <div>
-                        <RadioGroup
-                          onValueChange={(e) => {
-                            handleOptChange(e, index);
-                          }}
-                        >
-                          {value.options.map((opt, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center space-x-2"
-                            >
-                              <RadioGroupItem value={opt} id={opt} />
-                              <Label className=" font-normal" htmlFor={opt}>
-                                {opt}
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <Button type="submit" className=" w-full lg:w-fit">
-                Submit
-              </Button>
-            </div>
-          </form>
+                  );
+                })}
+                <Button type="submit" className=" w-full lg:w-fit">
+                  Submit
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
