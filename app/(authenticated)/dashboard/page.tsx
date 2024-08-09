@@ -13,6 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Error from "@/components/Error";
+import Loading from "@/components/Loading";
+import Refetching from "@/components/Refetching";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Page({
   params,
@@ -24,6 +29,7 @@ export default function Page({
   const session = useSession();
   const [students, setStudents] = useListState<student>();
   const [selectedCohort, setSelectedCohort] = useState<Cohorts>();
+  const queryClient = useQueryClient();
 
   interface student {
     id: number;
@@ -73,42 +79,113 @@ export default function Page({
     Cohorts: Cohorts[];
   }
 
-  const { data, loading, error, refetch, abort } = useFetch<studentInfo>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/volfuldata`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
-      autoInvoke: true,
-    },
-    [session],
-  );
+  const { data, isError, isLoading, isRefetching } = useQuery<studentInfo>({
+    queryKey: ["volData"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/volfuldata`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
 
-  const PocDetails = useFetch<PocForDetails>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/pocById/${data?.Poc?.poc?.id}`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
-      autoInvoke: true,
+      return await response.json();
     },
-    [session, data],
-  );
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const { data, loading, error, refetch, abort } = useFetch<studentInfo>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/volfuldata`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //     autoInvoke: true,
+  //   },
+  //   [session],
+  // );
+  //
+  const PocDetails = useQuery<PocForDetails>({
+    queryKey: ["pocData"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/pocById/${data?.Poc?.poc?.id}`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
+    },
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const PocDetails = useFetch<PocForDetails>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/pocById/${data?.Poc?.poc?.id}`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //     autoInvoke: true,
+  //   },
+  //   [session, data],
+  // );
+
+  const mutation = useMutation({
+    mutationKey: ["getStudents"],
+    mutationFn: async (data: any) => {
+      try {
+        const resp = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/getAll`,
+          {
+            volId: session.data?.user.auth_id,
+            cohortId: data,
+          },
+          {
+            headers: {
+              authorization: `Bearer ${session.data?.user.auth_token}`,
+            },
+          },
+        );
+        setStudents.setState(resp.data);
+      } catch (e) {
+        console.log(e);
+      }
+    },
+    onSettled: (data: any) => {
+      // setStudents.setState(resp.data);
+      // queryClient.invalidateQueries({ queryKey: ["dailyLog"] });
+    },
+  });
 
   const getStudents = async (cohId: number) => {
-    const resp = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/getAll`,
-      {
-        volId: session.data?.user.auth_id,
-        cohortId: cohId,
-      },
-      {
-        headers: {
-          authorization: `Bearer ${session.data?.user.auth_token}`,
-        },
-      },
-    );
-    setStudents.setState(resp.data);
+    try {
+      mutation.mutate(cohId);
+    } catch (e) {
+      console.log(e);
+    }
+    // const resp = await axios.post(
+    //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/getAll`,
+    //   {
+    //     volId: session.data?.user.auth_id,
+    //     cohortId: cohId,
+    //   },
+    //   {
+    //     headers: {
+    //       authorization: `Bearer ${session.data?.user.auth_token}`,
+    //     },
+    //   },
+    // );
+    // setStudents.setState(resp.data);
   };
 
   const setCohort = (val: string) => {
@@ -152,7 +229,11 @@ export default function Page({
           </Select>
         </div>
         <div className="overflow-x-auto">
-          {students && (
+          {isRefetching && <Refetching />}
+          {isError && <Error />}
+          {!isError && isLoading && <Loading />}
+          {!isError && !isLoading && students && (
+            // { students && (
             <div>
               <StudentTable columns={columns} data={students} />
             </div>

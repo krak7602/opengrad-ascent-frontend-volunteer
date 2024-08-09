@@ -3,6 +3,11 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "next-auth/react";
 import { useFetch } from "@/lib/useFetch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import Error from "@/components/Error";
+import Loading from "@/components/Loading";
+import Refetching from "@/components/Refetching";
+
 import {
   Popover,
   PopoverContent,
@@ -32,16 +37,36 @@ interface vol {
 
 export function StudentDetails({ studId }: { studId: string }) {
   const session = useSession();
-  const { data, loading, error, refetch, abort } = useFetch<studentData>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/${studId}`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
-      autoInvoke: true,
+
+  const { data, isError, isLoading, isRefetching } = useQuery<studentData>({
+    queryKey: ["studentData"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/${studId}`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
     },
-    [session],
-  );
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const { data, loading, error, refetch, abort } = useFetch<studentData>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/${studId}`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //     autoInvoke: true,
+  //   },
+  //   [session],
+  // );
 
   return (
     <div>
@@ -50,12 +75,16 @@ export function StudentDetails({ studId }: { studId: string }) {
           <Button variant="outline">Details</Button>
         </PopoverTrigger>
         <PopoverContent className="w-80">
-          {loading && (
+          {/* {loading && (
             <div>
               <Skeleton className="h-8 w-full rounded-md" />
             </div>
-          )}
-          {data && (
+          )} */}
+          {isRefetching && <Refetching />}
+          {isError && <Error />}
+          {!isError && isLoading && <Loading />}
+          {!isError && !isLoading && data && (
+            // { data && (
             <div>
               <div className="grid gap-4">
                 <div className="space-y-2">

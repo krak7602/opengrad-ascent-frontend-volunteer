@@ -15,6 +15,10 @@ import { format } from "date-fns";
 import { PopoverClose } from "@radix-ui/react-popover";
 import { useSession } from "next-auth/react";
 import { useFetch } from "@/lib/useFetch";
+import { useQuery } from "@tanstack/react-query";
+import Error from "@/components/Error";
+import Loading from "@/components/Loading";
+import Refetching from "@/components/Refetching";
 
 export default function LogHistory() {
   const router = useRouter();
@@ -40,16 +44,35 @@ export default function LogHistory() {
     Logs: slotItem[];
   }
 
-  const { data, loading, error, refetch, abort } = useFetch<logDay>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/attendence/get/${session.data?.user.auth_id}/${date ? date.getMonth() + 1 : ""}-${date?.getDate()}-${date?.getFullYear()}`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
-      autoInvoke: true,
+  const { data, isError, isLoading, isRefetching } = useQuery<logDay>({
+    queryKey: ["dailyLog"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/attendence/get/${session.data?.user.auth_id}/${date ? date.getMonth() + 1 : ""}-${date?.getDate()}-${date?.getFullYear()}`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
     },
-    [session, date],
-  );
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const { data, loading, error, refetch, abort } = useFetch<logDay>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/attendence/get/${session.data?.user.auth_id}/${date ? date.getMonth() + 1 : ""}-${date?.getDate()}-${date?.getFullYear()}`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //     autoInvoke: true,
+  //   },
+  //   [session, date],
+  // );
 
   return (
     <div className="overflow-x-auto px-1 pt-2">
@@ -81,41 +104,46 @@ export default function LogHistory() {
               </PopoverClose>
             </PopoverContent>
           </Popover>
-          <div>
-            <div className=" pb-2">
-              {data?.Logs && data?.isPocVerified && (
-                <div
-                  className=" bg-blue-600 text-gray-100 font-semibold rounded-md px-2 py-2
-                             w-full text-center"
-                >
-                  Verified
-                </div>
-              )}
-              {data?.Logs && !data?.isPocVerified && (
-                <div
-                  className=" bg-red-500 text-gray-100 font-semibold rounded-md px-2 py-2
-                             w-full text-center"
-                >
-                  Not Verified
-                </div>
-              )}
-            </div>
+          {isRefetching && <Refetching />}
+          {isError && <Error />}
+          {!isError && isLoading && <Loading />}
+          {!isError && !isLoading && data && (
             <div>
-              {data?.Logs?.map((slot, index) => (
-                <div key={index}>
-                  <div className="flex text-pretty">
-                    <div className=" text-lg font-semibold">
-                      Slot #{index + 1}: {slot.activity} ({slot.hourStart}:
-                      {slot.minStart} - {slot.hourEnd}:{slot.minEnd})
-                    </div>
+              <div className=" pb-2">
+                {data?.Logs && data?.isPocVerified && (
+                  <div
+                    className=" bg-blue-600 text-gray-100 font-semibold rounded-md px-2 py-2
+                               w-full text-center"
+                  >
+                    Verified
                   </div>
+                )}
+                {data?.Logs && !data?.isPocVerified && (
+                  <div
+                    className=" bg-red-500 text-gray-100 font-semibold rounded-md px-2 py-2
+                               w-full text-center"
+                  >
+                    Not Verified
+                  </div>
+                )}
+              </div>
+              <div>
+                {data?.Logs?.map((slot, index) => (
+                  <div key={index}>
+                    <div className="flex text-pretty">
+                      <div className=" text-lg font-semibold">
+                        Slot #{index + 1}: {slot.activity} ({slot.hourStart}:
+                        {slot.minStart} - {slot.hourEnd}:{slot.minEnd})
+                      </div>
+                    </div>
 
-                  <div>{slot.details}</div>
-                  <div></div>
-                </div>
-              ))}
+                    <div>{slot.details}</div>
+                    <div></div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

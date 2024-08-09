@@ -20,6 +20,10 @@ import { Button } from "@/components/ui/button";
 import { useFetch } from "@/lib/useFetch";
 import { NotificationTable } from "@/components/volunteer/NotificationTable";
 import { columns } from "@/components/volunteer/NotificationColumn";
+import { useQuery } from "@tanstack/react-query";
+import Error from "@/components/Error";
+import Loading from "@/components/Loading";
+import Refetching from "@/components/Refetching";
 
 export default function Page({
   params,
@@ -63,16 +67,35 @@ export default function Page({
     Poc: Poc;
     Cohorts: Cohorts[];
   }
-  const volFulData = useFetch<studentInfo>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/volfuldata`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
-      autoInvoke: true,
+
+  const volFulData = useQuery<studentInfo>({
+    queryKey: ["volData"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/volfuldata`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
     },
-    [session],
-  );
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+  // const volFulData = useFetch<studentInfo>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/volfuldata`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //     autoInvoke: true,
+  //   },
+  //   [session],
+  // );
 
   const [recipientCohortCount, setRecipientCohortCount] = useState(0);
   const [recipientPartnerCount, setRecipientPartnerCount] = useState(1);
@@ -115,24 +138,64 @@ export default function Page({
     form_id: number;
     receipient_id: number[];
   }
-  const notifDataCohort = useFetch<notif[]>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/cohort/get/${recipientCohorts[0]?.id}`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
+
+  const notifDataCohort = useQuery<notif[]>({
+    queryKey: ["cohortNotif"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/cohort/get/${recipientCohorts[0]?.id}`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
     },
-    [session],
-  );
-  const notifDataPoc = useFetch<notif[]>(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/poc/get/${volFulData?.data?.Poc?.poc?.id}`,
-    {
-      headers: {
-        authorization: `Bearer ${session.data?.user.auth_token}`,
-      },
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const notifDataCohort = useFetch<notif[]>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/cohort/get/${recipientCohorts[0]?.id}`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //   },
+  //   [session],
+  // );
+
+  const notifDataPoc = useQuery<notif[]>({
+    queryKey: ["cohortNotif"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/poc/get/${volFulData?.data?.Poc?.poc?.id}`,
+        {
+          headers: {
+            authorization: `Bearer ${session.data?.user.auth_token}`,
+          },
+        },
+      );
+      return await response.json();
     },
-    [session],
-  );
+    refetchInterval: 10000,
+    staleTime: 60000,
+    enabled: !!session.data?.user.auth_token,
+    refetchOnMount: true,
+  });
+
+  // const notifDataPoc = useFetch<notif[]>(
+  //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/poc/get/${volFulData?.data?.Poc?.poc?.id}`,
+  //   {
+  //     headers: {
+  //       authorization: `Bearer ${session.data?.user.auth_token}`,
+  //     },
+  //   },
+  //   [session],
+  // );
 
   return (
     <div className="container mx-auto my-6 px-4 sm:px-6 lg:px-8">
@@ -210,15 +273,26 @@ export default function Page({
             </ToggleGroup>
           </div>
         </div>
-        {notifDataCohort.data && notifDataCohort.data.constructor === Array && (
-          <div>
-            <NotificationTable
-              columns={columns}
-              data={[...notifDataCohort.data].reverse()}
-            />
-          </div>
-        )}
-        {notifDataPoc.data &&
+        {notifDataCohort.isRefetching && <Refetching />}
+        {notifDataCohort.isError && <Error />}
+        {!notifDataCohort.isError && notifDataCohort.isLoading && <Loading />}
+        {!notifDataCohort.isError &&
+          !notifDataCohort.isLoading &&
+          notifDataCohort.data &&
+          notifDataCohort.data.constructor === Array && (
+            <div>
+              <NotificationTable
+                columns={columns}
+                data={[...notifDataCohort.data].reverse()}
+              />
+            </div>
+          )}
+        {notifDataPoc.isRefetching && <Refetching />}
+        {notifDataPoc.isError && <Error />}
+        {!notifDataPoc.isError && notifDataPoc.isLoading && <Loading />}
+        {!notifDataPoc.isError &&
+          !notifDataPoc.isLoading &&
+          notifDataPoc.data &&
           notifDataPoc.data.constructor === Array &&
           recipientPartnerCount != 0 && (
             <div>

@@ -25,6 +25,10 @@ import { useListState } from "@mantine/hooks";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import LogHistory from "@/components/volunteer/LogHistory";
+import Error from "@/components/Error";
+import Loading from "@/components/Loading";
+import Refetching from "@/components/Refetching";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function DailyLog() {
   const router = useRouter();
@@ -33,6 +37,8 @@ export default function DailyLog() {
   const [formData, setFormData] = useListState<slotItem>([]);
   const [date, setDate] = useState<Date>();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   interface slotItem {
     id: number;
     hourStart: string;
@@ -118,6 +124,37 @@ export default function DailyLog() {
       setNumSlots(numSlots - 1);
     }
   };
+  const mutation = useMutation({
+    mutationKey: ["logSubmit"],
+    mutationFn: async () => {
+      try {
+        if (formData && date) {
+          const resp = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/attendence/create`,
+            {
+              vol_id: session.data?.user.auth_id,
+              Date: `${date.getMonth() + 1}-${date.getDate()}-${date.getFullYear()}`,
+              Logs: formData,
+            },
+            {
+              headers: {
+                authorization: `Bearer ${session.data?.user.auth_token}`,
+              },
+            },
+          );
+        }
+
+        // if (resp.data.id) {
+        //   return { id: resp.data.id, name: studName, email: studEmail };
+        // }
+      } catch (e) {
+        console.log(e);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["dailyLog"] });
+    },
+  });
 
   const formSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
