@@ -57,7 +57,14 @@ export default function LogField({
               <SelectTrigger className="w-[62px] text-center font-mono text-base tabular-nums caret-transparent focus:bg-accent focus:text-accent-foreground [&::-webkit-inner-spin-button]:appearance-nonew-[25px]">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                ref={(ref) => {
+                  if (!ref) return;
+                  ref.ontouchstart = (e) => {
+                    e.preventDefault();
+                  };
+                }}
+              >
                 <SelectItem value="00">00</SelectItem>
                 <SelectItem value="01">01</SelectItem>
                 <SelectItem value="02">02</SelectItem>
@@ -98,7 +105,14 @@ export default function LogField({
               <SelectTrigger className="w-[62px] text-center font-mono text-base tabular-nums caret-transparent focus:bg-accent focus:text-accent-foreground [&::-webkit-inner-spin-button]:appearance-nonew-[25px]">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                ref={(ref) => {
+                  if (!ref) return;
+                  ref.ontouchstart = (e) => {
+                    e.preventDefault();
+                  };
+                }}
+              >
                 <SelectItem value="00">00</SelectItem>
                 <SelectItem value="30">30</SelectItem>
               </SelectContent>
@@ -125,7 +139,14 @@ export default function LogField({
               <SelectTrigger className="w-[62px] text-center font-mono text-base tabular-nums caret-transparent focus:bg-accent focus:text-accent-foreground [&::-webkit-inner-spin-button]:appearance-nonew-[25px]">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                ref={(ref) => {
+                  if (!ref) return;
+                  ref.ontouchstart = (e) => {
+                    e.preventDefault();
+                  };
+                }}
+              >
                 <SelectItem value="00">00</SelectItem>
                 <SelectItem value="01">01</SelectItem>
                 <SelectItem value="02">02</SelectItem>
@@ -166,7 +187,14 @@ export default function LogField({
               <SelectTrigger className="w-[62px] text-center font-mono text-base tabular-nums caret-transparent focus:bg-accent focus:text-accent-foreground [&::-webkit-inner-spin-button]:appearance-nonew-[25px]">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                ref={(ref) => {
+                  if (!ref) return;
+                  ref.ontouchstart = (e) => {
+                    e.preventDefault();
+                  };
+                }}
+              >
                 <SelectItem value="00">00</SelectItem>
                 <SelectItem value="30">30</SelectItem>
               </SelectContent>

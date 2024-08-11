@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import Error from "@/components/Error";
 import Loading from "@/components/Loading";
 import Refetching from "@/components/Refetching";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Page({
   params,
@@ -33,6 +34,7 @@ export default function Page({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const session = useSession();
+  const queryClient = useQueryClient();
 
   interface vol {
     id: number;
@@ -104,12 +106,13 @@ export default function Page({
   const [cohortAdd, setCohortAdd] = useState(false);
   const [partnerAdd, setPartnerAdd] = useState(true);
 
-  const AddCohort = (selectedCohort: Cohorts) => {
+  const AddCohort = async (selectedCohort: Cohorts) => {
     if (volFulData.data?.Cohorts) {
       volFulData.data.Cohorts.forEach((element) => {
         if (element.name === selectedCohort.name) {
           setRecipientCohorts.setState([element]);
           setRecipientCohortCount(1);
+          setRecipientPartnerCount(0);
         }
       });
     }
@@ -128,6 +131,9 @@ export default function Page({
       setRecipientCohorts.setState([]);
       setRecipientCohortCount(0);
       setRecipientPartnerCount(1);
+      queryClient.invalidateQueries({
+        queryKey: ["notifDataPoc"],
+      });
     }
   };
 
@@ -140,7 +146,7 @@ export default function Page({
   }
 
   const notifDataCohort = useQuery<notif[]>({
-    queryKey: ["cohortNotif"],
+    queryKey: ["notifDataCohort"],
     queryFn: async () => {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/cohort/get/${recipientCohorts[0]?.id}`,
@@ -169,7 +175,7 @@ export default function Page({
   // );
 
   const notifDataPoc = useQuery<notif[]>({
-    queryKey: ["cohortNotif"],
+    queryKey: ["notifDataPoc"],
     queryFn: async () => {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/notification/poc/get/${volFulData?.data?.Poc?.poc?.id}`,
@@ -203,7 +209,7 @@ export default function Page({
         <h1 className="text-2xl pb-6 font-bold">Inbox</h1>
       </div>
       <div className="overflow-x-auto px-1 pt-2">
-        <div className="flex w-full flex-col items-start rounded-md border px-3 py-3">
+        <div className="flex w-full flex-col items-start rounded-md border px-1 py-1">
           <div className="flex w-full flex-row px-1 py-1 items-center justify-between">
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild disabled={partnerAdd}>
@@ -211,7 +217,7 @@ export default function Page({
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
-                  className="lg:w-fit w-full font-light py-3 rounded-lg px-3  mb-2 flex justify-center items-center mr-2"
+                  className="lg:w-fit w-full font-light py-3 rounded-lg px-3 flex justify-center items-center mr-2"
                 >
                   <div className="mx-2">
                     {recipientCohortCount != 0 && (
@@ -236,7 +242,11 @@ export default function Page({
                                   key={cohort.id}
                                   value={cohort.name}
                                   onSelect={(currentValue) => {
-                                    AddCohort(cohort);
+                                    AddCohort(cohort).then(() => {
+                                      queryClient.invalidateQueries({
+                                        queryKey: ["notifDataCohort"],
+                                      });
+                                    });
                                     setOpen(false);
                                   }}
                                 >
@@ -254,7 +264,7 @@ export default function Page({
             <ToggleGroup
               type="single"
               defaultValue="partners"
-              className=" ml-1 gap-0 mb-2 rounded bg-slate-200"
+              className=" ml-1 gap-0 rounded bg-slate-200"
             >
               <ToggleGroupItem
                 className=" px-2 font-light rounded-l-sm rounded-r-none data-[state=on]:bg-primary data-[state=on]:text-white"
@@ -279,6 +289,7 @@ export default function Page({
         {!notifDataCohort.isError &&
           !notifDataCohort.isLoading &&
           notifDataCohort.data &&
+          recipientCohortCount == 1 &&
           notifDataCohort.data.constructor === Array && (
             <div>
               <NotificationTable
@@ -293,8 +304,8 @@ export default function Page({
         {!notifDataPoc.isError &&
           !notifDataPoc.isLoading &&
           notifDataPoc.data &&
-          notifDataPoc.data.constructor === Array &&
-          recipientPartnerCount != 0 && (
+          recipientPartnerCount == 1 &&
+          notifDataPoc.data.constructor === Array && (
             <div>
               <NotificationTable
                 columns={columns}

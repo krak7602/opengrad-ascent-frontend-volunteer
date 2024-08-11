@@ -125,7 +125,7 @@ export default function Page({
     },
     refetchInterval: 10000,
     staleTime: 60000,
-    enabled: !!session.data?.user.auth_token,
+    enabled: !!data?.Poc.poc.id,
     refetchOnMount: true,
   });
 
